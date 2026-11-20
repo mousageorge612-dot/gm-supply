@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سبلاي | Forma Supply</title>
+<meta name="description" content="سبلاي: سوق إلكتروني سوري لمعدات وإكسسوارات الرياضة من تجار متعددين. اطلب من التاجر مباشرة والدفع عند الاستلام.">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta property="og:title" content="سبلاي | Forma Supply">
+<meta property="og:image" content="/assets/brand/Forma-Supply-Avatar.png">
+<link rel="preload" href="/assets/fonts/cairo-arabic-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/app.css?v=1">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="سبلاي | Forma Supply - الرئيسية"><img src="/assets/brand/forma-supply-logo-900.png" width="132" height="52" alt="سبلاي | Forma Supply"></a>
+    <div class="top-actions">
+      <button class="iconbtn" id="cartBtn" type="button" aria-label="السلة"><span id="cartIcon"></span><span class="count" id="cartCount" hidden>0</span></button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap" id="main">
+  <div id="storeHead"></div>
+  <div class="searchbar">
+    <label class="search" for="q"><span id="searchIcon"></span>
+      <input id="q" type="search" placeholder="شو عم تدوّر؟" autocomplete="off" enterkeyhint="search" aria-label="بحث بالعربي أو الإنكليزي">
+    </label>
+  </div>
+  <div class="chips" id="chips" role="tablist" aria-label="الفئات"></div>
+  <div class="filterrow">
+    <button class="btn ghost sm" id="filterBtn" type="button"><span id="filterIcon"></span> فلترة وترتيب</button>
+    <span class="resultinfo" id="resultInfo" style="padding:0"></span>
+  </div>
+  <div class="activefilters" id="activeFilters"></div>
+  <div class="grid" id="grid" aria-live="polite"><div class="empty">عم نحمّل المنتجات…</div></div>
+</main>
+
+<main class="wrap" id="orderView" hidden></main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p style="margin:0 0 6px"><b>سبلاي | <span class="ltr">Forma Supply</span></b> · سوق معدات الرياضة من تجار سوريين</p>
+    <p style="margin:0 0 6px">كل طلب بيروح للتاجر صاحب المنتج، والدفع عند الاستلام.</p>
+    <p style="margin:0"><a href="/merchant/">عندك محل؟ افتح متجرك على سبلاي</a><span id="supportLink"></span></p>
+  </div>
+</footer>
+
+<div class="cartbar" id="cartBar" hidden><button class="btn" id="cartBarBtn" type="button"><span>عرض السلة · <span id="cartBarCount"></span></span><span id="cartBarTotal"></span></button></div>
+
+<script src="/assets/js/core.js?v=1"></script>
+<script src="/assets/js/store.js?v=1"></script>
+</body>
+</html>

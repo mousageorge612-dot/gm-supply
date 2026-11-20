@@ -1,2 +1,14 @@
-{"name":"GM Supply","short_name":"GM Supply","start_url":"/","display":"standalone","background_color":"#0a0a0a","theme_color":"#0a0a0a","lang":"ar","dir":"rtl",
-"icons":[{"src":"assets/img/icon-192.png","sizes":"192x192","type":"image/png"},{"src":"assets/img/icon-512.png","sizes":"512x512","type":"image/png"}]}
+{
+  "name": "سبلاي | Forma Supply",
+  "short_name": "سبلاي",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
+  "icons": [
+    { "src": "/assets/brand/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/assets/brand/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

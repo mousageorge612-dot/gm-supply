@@ -2,62 +2,57 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GM Supply | سوق المكملات الرياضية في سوريا</title>
-<meta name="description" content="GM Supply — سوق المكملات الرياضية والإكسسوارات في سوريا: بروتين، كرياتين، بري وركاوت، فيتامينات وإكسسوارات تمرين. توصيل لكل المحافظات والدفع شام كاش.">
-<meta name="theme-color" content="#0a0a0a">
-<meta property="og:title" content="GM Supply | سوق المكملات الرياضية في سوريا">
-<meta property="og:description" content="مكملات رياضية وإكسسوارات تمرين، توصيل لكل سوريا.">
-<meta property="og:image" content="https://supply.georgemousa.com/assets/img/icon-512.png">
-<link rel="canonical" href="https://supply.georgemousa.com/">
-<link rel="icon" type="image/png" href="assets/img/favicon.png">
-<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="assets/styles.css?v=2">
-<script>if(location.protocol==='http:'&&location.hostname!=='localhost')location.replace('https://'+location.host+location.pathname+location.search);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سبلاي | Forma Supply</title>
+<meta name="description" content="سبلاي: سوق إلكتروني سوري لمعدات وإكسسوارات الرياضة من تجار متعددين. اطلب من التاجر مباشرة والدفع عند الاستلام.">
+<meta name="theme-color" content="#FFFFFF">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/assets/brand/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta property="og:title" content="سبلاي | Forma Supply">
+<meta property="og:image" content="/assets/brand/Forma-Supply-Avatar.png">
+<link rel="preload" href="/assets/fonts/cairo-arabic-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/css/app.css?v=1">
 </head>
 <body>
-<div class="announce" id="announce" hidden></div>
-<header class="top"><div class="wrap">
-  <a class="brand" href="./" aria-label="GM Supply"><img src="assets/img/logo-h.webp" alt="GM Supply" width="206" height="30"></a>
-  <button class="cart-btn" id="cartBtn" aria-label="السلة">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
-    السلة <span class="n" id="cartN">0</span>
-  </button>
-</div></header>
-
-<section class="hero"><div class="wrap">
-  <img class="logo" src="assets/img/logo-full.webp" alt="GM Supply مكملات أصلية ومضمونة" width="780" height="571">
-  <h1>سوق المكملات الرياضية في سوريا</h1>
-  <p>بروتين، كرياتين، بري وركاوت، فيتامينات وإكسسوارات تمرين، بمكان واحد.</p>
-  <div class="trust">
-    <div><b>توصيل لكل سوريا</b><span>لكل المحافظات</span></div>
-    <div><b>الدفع شام كاش</b><span>سهل وسريع</span></div>
+<header class="top">
+  <div class="wrap">
+    <a class="logo" href="/" aria-label="سبلاي | Forma Supply - الرئيسية"><img src="/assets/brand/forma-supply-logo-900.png" width="132" height="52" alt="سبلاي | Forma Supply"></a>
+    <div class="top-actions">
+      <button class="iconbtn" id="cartBtn" type="button" aria-label="السلة"><span id="cartIcon"></span><span class="count" id="cartCount" hidden>0</span></button>
+    </div>
   </div>
-</div></section>
+</header>
 
-<main class="wrap">
-  <div class="bar">
-    <input class="search" id="q" type="search" placeholder="ابحث عن منتج أو ماركة..." aria-label="بحث">
-    <div class="chips" id="chips"></div>
+<main class="wrap" id="main">
+  <div id="storeHead"></div>
+  <div class="searchbar">
+    <label class="search" for="q"><span id="searchIcon"></span>
+      <input id="q" type="search" placeholder="شو عم تدوّر؟" autocomplete="off" enterkeyhint="search" aria-label="بحث بالعربي أو الإنكليزي">
+    </label>
   </div>
-  <div class="grid" id="grid"><div class="empty">عم نحمّل المنتجات...</div></div>
-
-  <h2 class="sec">كيف بتطلب؟</h2>
-  <div class="how">
-    <div><i>1</i><b>اختار منتجاتك</b><p>ضيفها للسلة، وإذا معك كود خصم حطه بالسلة.</p></div>
-    <div><i>2</i><b>أكّد الطلب</b><p>عبّي اسمك ورقمك وعنوانك، وبتنبعت الطلبية لواتساب مباشرة.</p></div>
-    <div><i>3</i><b>ادفع واستلم</b><p>بتحوّل المبلغ عبر شام كاش، وبينشحنلك الطلب لعند باب البيت.</p></div>
+  <div class="chips" id="chips" role="tablist" aria-label="الفئات"></div>
+  <div class="filterrow">
+    <button class="btn ghost sm" id="filterBtn" type="button"><span id="filterIcon"></span> فلترة وترتيب</button>
+    <span class="resultinfo" id="resultInfo" style="padding:0"></span>
   </div>
+  <div class="activefilters" id="activeFilters"></div>
+  <div class="grid" id="grid" aria-live="polite"><div class="empty">عم نحمّل المنتجات…</div></div>
 </main>
-<button class="cartbar" id="cartBar" hidden><span>عرض السلة</span><b id="cartBarT"></b></button>
 
-<footer><div class="wrap">
-  <p><b class="en" style="color:var(--gold)">GM SUPPLY</b> · سوق المكملات الرياضية</p>
-  <p><a id="waFoot" href="https://wa.me/963987461750" target="_blank" rel="noopener">تواصل معنا على واتساب</a></p>
-</div></footer>
+<main class="wrap" id="orderView" hidden></main>
 
-<script src="assets/core.js?v=2"></script>
-<script src="assets/store.js?v=2"></script>
+<footer class="footer">
+  <div class="wrap">
+    <p style="margin:0 0 6px"><b>سبلاي | <span class="ltr">Forma Supply</span></b> · سوق معدات الرياضة من تجار سوريين</p>
+    <p style="margin:0 0 6px">كل طلب بيروح للتاجر صاحب المنتج، والدفع عند الاستلام.</p>
+    <p style="margin:0"><a href="/merchant/">عندك محل؟ افتح متجرك على سبلاي</a><span id="supportLink"></span></p>
+  </div>
+</footer>
+
+<div class="cartbar" id="cartBar" hidden><button class="btn" id="cartBarBtn" type="button"><span>عرض السلة · <span id="cartBarCount"></span></span><span id="cartBarTotal"></span></button></div>
+
+<script src="/assets/js/core.js?v=1"></script>
+<script src="/assets/js/store.js?v=1"></script>
 </body>
 </html>
