@@ -335,10 +335,10 @@
         (o.seller.is_demo ? '<div class="note bad">هاد طلب من متجر تجريبي، ما في بضاعة حقيقية.</div>' : '') +
         '<div class="panel"><div class="dash-top" style="padding:0 0 8px"><h2 style="font-size:18px">طلب ' + F.ltr(o.number) + '</h2><span class="pill ' + o.status + '">' + F.STATUS[o.status] + '</span></div>' +
         '<p class="small muted" style="margin:0 0 8px">احتفظ برابط هالصفحة لتتابع حالة طلبك.</p>' +
-        o.items.map(function (i) { return '<div class="sum" style="background:none;padding:0;margin:0"><div class="r small"><span dir="auto">' + esc(i.name) + (i.variant_label !== 'قياس واحد' ? ' (' + esc(i.variant_label) + ')' : '') + ' × <span class="num">' + i.qty + '</span></span><span>' + F.syp(i.unit_price * i.qty) + '</span></div></div>'; }).join('') +
-        '<div class="sum"><div class="r"><span>مجموع المنتجات</span><b>' + F.syp(o.subtotal) + '</b></div>' +
-        '<div class="r"><span>الشحن</span><span>' + (o.delivery_method === 'pickup' ? 'استلام من ' + esc(o.pickup_branch) : (known ? F.syp(o.shipping_fee) : 'غير محدد بعد')) + '</span></div>' +
-        '<div class="r t"><span>' + (known ? 'المجموع' : 'المجموع بدون الشحن') + '</span><span>' + F.syp(o.total) + '</span></div></div>' +
+        o.items.map(function (i) { return '<div class="sum" style="background:none;padding:0;margin:0"><div class="r small"><span dir="auto">' + esc(i.name) + (i.variant_label !== 'قياس واحد' ? ' (' + esc(i.variant_label) + ')' : '') + ' × <span class="num">' + i.qty + '</span></span><span>' + F.syp(i.unit_price * i.qty, o.usd_rate || 0) + '</span></div></div>'; }).join('') +
+        '<div class="sum"><div class="r"><span>مجموع المنتجات</span><b>' + F.syp(o.subtotal, o.usd_rate || 0) + '</b></div>' +
+        '<div class="r"><span>الشحن</span><span>' + (o.delivery_method === 'pickup' ? 'استلام من ' + esc(o.pickup_branch) : (known ? F.syp(o.shipping_fee, o.usd_rate || 0) : 'غير محدد بعد')) + '</span></div>' +
+        '<div class="r t"><span>' + (known ? 'المجموع' : 'المجموع بدون الشحن') + '</span><span>' + F.syp(o.total, o.usd_rate || 0) + '</span></div></div>' +
         (!known ? '<div class="note warn">أجور الشحن مع ' + esc(o.shipping_company || '') + ' بيبلّغك فيها التاجر. الشحن مو مجاني.</div>' : '') +
         '<dl class="kv"><dt>الاسم</dt><dd>' + esc(o.customer_name) + '</dd><dt>الموبايل</dt><dd>' + F.ltr(o.phone) + '</dd><dt>المحافظة</dt><dd>' + esc(o.governorate) + (o.city ? '، ' + esc(o.city) : '') + '</dd>' +
         (o.address ? '<dt>العنوان</dt><dd>' + esc(o.address) + '</dd>' : '') + (o.shipping_company ? '<dt>شركة الشحن</dt><dd>' + esc(o.shipping_company) + '</dd>' : '') +
@@ -402,6 +402,7 @@
     });
   }
   function index() {
+    F.rate = Number(D.usd_rate) || null;
     sellerById = {}; catBySlug = {};
     D.sellers.forEach(function (s) { sellerById[s.id] = s; });
     D.categories.forEach(function (c) { catBySlug[c.slug] = c; });

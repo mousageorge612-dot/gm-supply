@@ -6,11 +6,13 @@
 
   F.editProduct = function (o) {
     // o: { s: Session, seller, product (with fs_variants) | null, mode, categories, requestId, requestFiles, onSaved }
-    var p = o.product || { name_ar: '', name_en: '', description: '', category: '', images: [], price_syp: '', status: 'draft', fs_variants: [] };
+    var p = o.product || { name_ar: '', name_en: '', description: '', category: '', images: [], price_syp: '', price_usd: null, status: 'draft', fs_variants: [] };
+    function toUsd(usd, syp) { if (usd != null) return Number(usd); if (syp > 0 && F.rate) return Math.round(syp / F.rate * 100) / 100; return null; }
+    function numIn(x) { var t = String(x).replace(/[^\d.]/g, ''); return t === '' ? null : Number(t); }
     var imgs = (p.images || []).slice();
     var vars = (p.fs_variants || []).slice().sort(function (a, b) { return (a.sort - b.sort) || (a.id - b.id); })
-      .map(function (v) { return { id: v.id, label: v.label, price_syp: v.price_syp, stock: v.stock }; });
-    if (!vars.length) vars.push({ label: 'قياس واحد', price_syp: null, stock: 1 });
+      .map(function (v) { return { id: v.id, label: v.label, price_usd: toUsd(v.price_usd, v.price_syp), stock: v.stock }; });
+    if (!vars.length) vars.push({ label: 'قياس واحد', price_usd: null, stock: 1 });
     var removed = [];
     var cats = o.categories || [];
     var isSupp = function (slug) { var c = cats.filter(function (x) { return x.slug === slug; })[0]; return c && c.kind === 'supplement'; };
@@ -18,7 +20,7 @@
     function varRows() {
       return vars.map(function (v, i) {
         return '<div class="varrow" data-i="' + i + '"><input class="inp" data-k="label" value="' + esc(v.label) + '" placeholder="مثلاً M أو أسود" aria-label="القياس">' +
-          '<input class="inp ltr" data-k="price_syp" inputmode="numeric" value="' + (v.price_syp == null ? '' : v.price_syp) + '" placeholder="نفس السعر" aria-label="سعر خاص">' +
+          '<input class="inp ltr" data-k="price_usd" inputmode="decimal" value="' + (v.price_usd == null ? '' : v.price_usd) + '" placeholder="نفس السعر $" aria-label="سعر خاص بالدولار">' +
           '<input class="inp ltr" data-k="stock" inputmode="numeric" value="' + (v.stock == null ? 0 : v.stock) + '" aria-label="الكمية">' +
           '<button type="button" data-del="' + i + '" aria-label="حذف">✕</button></div>';
       }).join('');
@@ -40,9 +42,9 @@
         cats.map(function (c) { return '<option value="' + c.slug + '"' + (c.slug === p.category ? ' selected' : '') + '>' + esc(c.name_ar) + (c.kind === 'supplement' ? ' (مكمّل، بيحتاج مراجعة)' : '') + '</option>'; }).join('') + '</select>' +
         '<div class="note warn" id="peSupp" hidden>المكمّلات الغذائية ما بتنعرض للزبائن قبل مراجعة الإدارة وتفعيلها للمتجر. فيك تجهّزها هلق.</div></div>' +
       '<div class="field"><label for="peDesc">الوصف</label><textarea class="inp" id="peDesc" placeholder="المادة، المقاس، طريقة الاستعمال…">' + esc(p.description || '') + '</textarea></div>' +
-      '<div class="field"><label for="pePrice">السعر (ل.س)</label><input class="inp ltr" id="pePrice" inputmode="numeric" value="' + (p.price_syp || '') + '" required></div>' +
+      '<div class="field"><label for="pePrice">السعر بالدولار ($)</label><input class="inp ltr" id="pePrice" inputmode="decimal" value="' + (toUsd(p.price_usd, p.price_syp) || '') + '" required><div class="small muted" id="peSyp"></div></div>' +
       '<div class="lbl">القياسات والكميات</div><div class="small muted" style="margin-bottom:6px">لكل قياس أو لون: الاسم، سعر خاص إذا مختلف، والكمية الموجودة عندك.</div>' +
-      '<div class="varrow small muted" style="margin:0"><span>القياس</span><span>سعر خاص</span><span>الكمية</span><span></span></div>' +
+      '<div class="varrow small muted" style="margin:0"><span>القياس</span><span>سعر خاص $</span><span>الكمية</span><span></span></div>' +
       '<div id="peVars">' + varRows() + '</div><button type="button" class="btn ghost sm" id="peAddVar">+ قياس أو لون</button>' +
       '<div class="err" id="peErr" role="alert" style="margin-top:10px"></div>' +
       '<div class="btnrow" style="margin-top:12px">' +
@@ -84,29 +86,31 @@
           $$('.varrow[data-i]', b).forEach(function (row) {
             var v = vars[+row.dataset.i];
             v.label = $('[data-k=label]', row).value.trim();
-            var pr = $('[data-k=price_syp]', row).value.replace(/[^\d]/g, ''); v.price_syp = pr === '' ? null : Number(pr);
+            v.price_usd = numIn($('[data-k=price_usd]', row).value);
             v.stock = Number($('[data-k=stock]', row).value.replace(/[^\d]/g, '') || 0);
           });
         }
         $('#peVars', b).onclick = function (e) {
           var x = e.target.closest('[data-del]'); if (!x) return;
           readVars(); var v = vars.splice(+x.dataset.del, 1)[0]; if (v && v.id) removed.push(v.id);
-          if (!vars.length) vars.push({ label: 'قياس واحد', price_syp: null, stock: 0 });
+          if (!vars.length) vars.push({ label: 'قياس واحد', price_usd: null, stock: 0 });
           $('#peVars', b).innerHTML = varRows();
         };
-        $('#peAddVar', b).onclick = function () { readVars(); vars.push({ label: '', price_syp: null, stock: 0 }); $('#peVars', b).innerHTML = varRows(); };
+        $('#peAddVar', b).onclick = function () { readVars(); vars.push({ label: '', price_usd: null, stock: 0 }); $('#peVars', b).innerHTML = varRows(); };
         function suppNote() { $('#peSupp', b).hidden = !isSupp($('#peCat', b).value); }
         $('#peCat', b).onchange = suppNote; suppNote();
         var want = 'draft';
         $$('button[type=submit]', b).forEach(function (bt) { bt.onclick = function () { want = bt.dataset.st; }; });
+        function sypHint() { var u = numIn($('#pePrice', b).value); $('#peSyp', b).textContent = (u && F.rate) ? ('يعني ' + F.sypText(u * F.rate) + ' حسب سعر الصرف اليوم (' + F.rate + ')') : ''; }
+        $('#pePrice', b).oninput = sypHint; sypHint();
         $('#pe', b).onsubmit = function (e) {
           e.preventDefault(); readVars();
           var row = { name_ar: $('#peAr', b).value.trim(), name_en: $('#peEn', b).value.trim() || null, category: $('#peCat', b).value,
-            description: $('#peDesc', b).value.trim() || null, images: imgs, price_syp: Number($('#pePrice', b).value.replace(/[^\d]/g, '') || 0), status: want };
+            description: $('#peDesc', b).value.trim() || null, images: imgs, price_usd: numIn($('#pePrice', b).value) || 0, status: want };
           var er = '';
           if (!row.name_ar) er = 'اكتب اسم المنتج';
           else if (!row.category) er = 'اختار الفئة';
-          else if (want !== 'draft' && row.price_syp <= 0) er = 'حط السعر قبل النشر';
+          else if (want !== 'draft' && row.price_usd <= 0) er = 'حط السعر بالدولار قبل النشر';
           else if (want !== 'draft' && !imgs.length) er = 'ضيف صورة واحدة عالأقل قبل النشر';
           else if (vars.some(function (v) { return !v.label; })) er = 'كل قياس لازم يكون إلو اسم';
           if (er) { $('#peErr', b).textContent = er; return; }
@@ -121,7 +125,7 @@
             pid = r[0].id;
             var jobs = removed.map(function (id) { return o.s.rest('fs_variants', 'id=eq.' + id, { method: 'DELETE' }); });
             vars.forEach(function (v, i) {
-              var body = { label: v.label, price_syp: v.price_syp, stock: v.stock, sort: i };
+              var body = { label: v.label, price_usd: v.price_usd, price_syp: null, stock: v.stock, sort: i };
               jobs.push(v.id ? o.s.rest('fs_variants', 'id=eq.' + v.id, { method: 'PATCH', body: body })
                              : o.s.rest('fs_variants', '', { method: 'POST', body: Object.assign(body, { product_id: pid }) }));
             });

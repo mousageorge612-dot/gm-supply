@@ -54,7 +54,8 @@
   /* ---------- boot ---------- */
   function start() {
     $('#logout').hidden = false;
-    return Promise.all([s.rest('fs_sellers', 'select=*&owner_id=eq.' + s.a.uid), s.rest('fs_categories', 'select=*&order=sort')]).then(function (r) {
+    return Promise.all([s.rest('fs_sellers', 'select=*&owner_id=eq.' + s.a.uid), s.rest('fs_categories', 'select=*&order=sort'), F.rpc('fs_rate').catch(function () { return null; })]).then(function (r) {
+      F.rate = Number(r[2]) || null;
       if (!r[0].length) {
         app.innerHTML = '<div class="login"><div class="note warn">هالحساب مو حساب تاجر. إذا إنت من فريق الدعم أو الإدارة ادخل من <a href="/admin/">لوحة الإدارة</a>.</div></div>';
         return;
@@ -151,12 +152,12 @@
       '<div class="small muted">' + F.date(o.created_at) + ' · ' + F.SOURCE[o.source] + ' · عمولة <span class="num">' + Number(o.commission_rate) + '%</span></div>' +
       items.map(function (i) {
         return '<div class="small" style="display:flex;justify-content:space-between;gap:8px;margin-top:4px"><span dir="auto">' + esc(i.name) + (i.variant_label !== 'قياس واحد' ? ' (' + esc(i.variant_label) + ')' : '') + ' × <span class="num">' + i.qty + '</span>' +
-          (i.returned_qty ? ' <span class="pill bad">مرتجع ' + i.returned_qty + '</span>' : '') + '</span><span>' + F.syp(i.unit_price * i.qty) + '</span></div>';
+          (i.returned_qty ? ' <span class="pill bad">مرتجع ' + i.returned_qty + '</span>' : '') + '</span><span>' + F.syp(i.unit_price * i.qty, o.usd_rate || 0) + '</span></div>';
       }).join('') +
-      '<div class="sum" style="margin:8px 0"><div class="r small"><span>المنتجات</span><span>' + F.syp(o.subtotal) + '</span></div>' +
-      '<div class="r small"><span>الشحن</span><span>' + (o.delivery_method === 'pickup' ? 'استلام من ' + esc(o.pickup_branch) : (o.shipping_fee == null ? 'غير محدد (' + esc(o.shipping_company) + ')' : F.syp(o.shipping_fee) + ' · ' + esc(o.shipping_company))) + '</span></div>' +
-      '<div class="r"><b>' + (o.shipping_fee == null ? 'المجموع بدون الشحن' : 'المجموع') + '</b><b>' + F.syp(o.total) + '</b></div>' +
-      (o.status === 'delivered' || o.status === 'returned' ? '<div class="r small muted"><span>عمولة سبلاي</span><span>' + F.syp(o.commission_amount) + '</span></div>' : '') + '</div>' +
+      '<div class="sum" style="margin:8px 0"><div class="r small"><span>المنتجات</span><span>' + F.syp(o.subtotal, o.usd_rate || 0) + '</span></div>' +
+      '<div class="r small"><span>الشحن</span><span>' + (o.delivery_method === 'pickup' ? 'استلام من ' + esc(o.pickup_branch) : (o.shipping_fee == null ? 'غير محدد (' + esc(o.shipping_company) + ')' : F.syp(o.shipping_fee, o.usd_rate || 0) + ' · ' + esc(o.shipping_company))) + '</span></div>' +
+      '<div class="r"><b>' + (o.shipping_fee == null ? 'المجموع بدون الشحن' : 'المجموع') + '</b><b>' + F.syp(o.total, o.usd_rate || 0) + '</b></div>' +
+      (o.status === 'delivered' || o.status === 'returned' ? '<div class="r small muted"><span>عمولة سبلاي</span><span>' + F.syp(o.commission_amount, o.usd_rate || 0) + '</span></div>' : '') + '</div>' +
       '<dl class="kv"><dt>الزبون</dt><dd>' + esc(o.customer_name) + '</dd><dt>الموبايل</dt><dd><a href="tel:' + esc(o.phone) + '">' + F.ltr(o.phone) + '</a></dd>' +
       '<dt>المحافظة</dt><dd>' + esc(o.governorate) + (o.city ? '، ' + esc(o.city) : '') + '</dd>' + (o.address ? '<dt>العنوان</dt><dd>' + esc(o.address) + '</dd>' : '') +
       (o.notes ? '<dt>ملاحظات</dt><dd>' + esc(o.notes) + '</dd>' : '') + (o.delivery_evidence ? '<dt>إثبات التسليم</dt><dd>' + esc(o.delivery_evidence) + '</dd>' : '') + '</dl>' +

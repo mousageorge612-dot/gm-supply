@@ -22,7 +22,7 @@
       if (!r.length) { app.innerHTML = '<div class="login"><div class="note bad">هالحساب مو من فريق سبلاي.</div></div>'; $('#logout').hidden = false; return; }
       A.role = r[0].role; $('#logout').hidden = false;
       $('#who').textContent = (A.role === 'admin' ? 'إدارة' : 'دعم') + ' · ' + (r[0].name || '');
-      return s.rest('fs_categories', 'select=*&order=sort').then(function (c) { A.cats = c; shell(); });
+      return Promise.all([s.rest('fs_categories', 'select=*&order=sort'), F.rpc('fs_rate').catch(function () { return null; })]).then(function (r) { A.cats = r[0]; F.rate = Number(r[1]) || null; shell(); });
     }).catch(function (x) { if (x.message === 'no_session' || x.status === 401) { s.clear(); loginView(); } else app.innerHTML = '<div class="note bad">' + esc(F.errText(x)) + '</div>'; });
   }
   function tabs() {
@@ -210,7 +210,7 @@
           return '<div class="order"><div class="hd"><b>' + F.ltr(o.number) + ' · ' + esc(sellerName(o.seller_id)) + '</b><span class="pill ' + o.status + '">' + F.STATUS[o.status] + '</span></div>' +
             '<div class="small muted">' + F.date(o.created_at) + ' · ' + F.SOURCE[o.source] + ' ' + Number(o.commission_rate) + '% · ' + esc(o.customer_name) + ' · ' + F.ltr(o.phone) + ' · ' + esc(o.governorate) + '</div>' +
             '<div class="small">' + o.fs_order_items.map(function (i) { return esc(i.name) + (i.variant_label !== 'قياس واحد' ? ' (' + esc(i.variant_label) + ')' : '') + ' × ' + i.qty + (i.returned_qty ? ' [مرتجع ' + i.returned_qty + ']' : ''); }).join('، ') + '</div>' +
-            '<div class="small">المنتجات ' + F.syp(o.subtotal) + ' · الشحن ' + (o.shipping_fee == null ? 'غير محدد' : F.syp(o.shipping_fee)) + ' · العمولة ' + F.syp(o.commission_amount) + (o.delivery_evidence ? ' · إثبات: ' + esc(o.delivery_evidence) : '') + (o.delivery_evidence_file ? ' · <a href="#" data-ev="' + esc(o.delivery_evidence_file) + '">صورة الإثبات</a>' : '') + '</div>' +
+            '<div class="small">المنتجات ' + F.syp(o.subtotal, o.usd_rate || 0) + ' · الشحن ' + (o.shipping_fee == null ? 'غير محدد' : F.syp(o.shipping_fee, o.usd_rate || 0)) + ' · العمولة ' + F.syp(o.commission_amount, o.usd_rate || 0) + (o.delivery_evidence ? ' · إثبات: ' + esc(o.delivery_evidence) : '') + (o.delivery_evidence_file ? ' · <a href="#" data-ev="' + esc(o.delivery_evidence_file) + '">صورة الإثبات</a>' : '') + '</div>' +
             (A.role === 'admin' && F.NEXT[o.status] ? '<div class="btnrow" style="margin-top:6px">' + F.NEXT[o.status].map(function (n) { return '<button class="btn sm ' + (n === 'cancelled' || n === 'returned' ? 'danger' : 'ghost') + '" data-o="' + o.id + '" data-st="' + n + '" type="button">' + F.STATUS[n] + '</button>'; }).join('') + '</div>' : '') + '</div>';
         }).join('') : '<div class="empty">ما في طلبات.</div>');
       $$('[data-of]').forEach(function (b) { b.onclick = function () { A.ofilter = b.dataset.of; ordersView(); }; });
@@ -275,6 +275,8 @@
         '<div class="row2"><div class="field"><label for="stR1">عمولة رابط التاجر %</label><input class="inp ltr" id="stR1" inputmode="decimal" value="' + Number(st.rate_seller_link) + '"></div>' +
         '<div class="field"><label for="stR2">عمولة زبون السوق %</label><input class="inp ltr" id="stR2" inputmode="decimal" value="' + Number(st.rate_marketplace) + '"></div></div>' +
         '<p class="small muted" style="margin-top:-6px">تغيير النسب بيطبق عالطلبات الجديدة بس. كل طلب محفوظ بنسبته وقت الطلب.</p>' +
+        '<div class="field"><label for="stX">سعر صرف الدولار اليوم (ل.س لكل 1$)</label><input class="inp ltr" id="stX" inputmode="decimal" value="' + Number(st.usd_rate || 150) + '"></div>' +
+        '<p class="small muted" style="margin-top:-6px">الأسعار محفوظة بالدولار. تغيير سعر الصرف بيحدّث سعر الليرة لكل المنتجات فوراً. الطلبات القديمة بتضل على سعر صرف يومها.</p>' +
         '<div class="seg" style="grid-template-columns:1fr"><label><input type="checkbox" id="stSupp"' + (st.supplements_enabled ? ' checked' : '') + '> تفعيل قسم المكمّلات الغذائية للعموم</label></div>' +
         '<p class="small muted" style="margin-top:-6px">حتى لو تفعّل: المكمّل بيظهر بس إذا المتجر مسموح إلو بالمكمّلات والمنتج نفسه مراجَع ومُوافق عليه. فعّله بعد التأكد من المتطلبات القانونية والتراخيص.</p>' +
         '<div class="err" id="stE"></div><button class="btn block" type="submit">حفظ</button></form>' +
@@ -284,7 +286,8 @@
         '<div class="err" id="sfE"></div><button class="btn dark block" type="submit">إضافة حساب للفريق</button></form></div>';
       $('#stf').onsubmit = function (e) {
         e.preventDefault();
-        var body = { support_whatsapp: $('#stW').value.replace(/[^\d+]/g, '') || null, rate_seller_link: Number($('#stR1').value), rate_marketplace: Number($('#stR2').value), supplements_enabled: $('#stSupp').checked, updated_at: new Date().toISOString() };
+        var body = { support_whatsapp: $('#stW').value.replace(/[^\d+]/g, '') || null, rate_seller_link: Number($('#stR1').value), rate_marketplace: Number($('#stR2').value), supplements_enabled: $('#stSupp').checked, usd_rate: Number($('#stX').value), updated_at: new Date().toISOString() };
+        if (!(body.usd_rate > 0)) { $('#stE').textContent = 'اكتب سعر صرف صحيح'; return; }
         if (!(body.rate_seller_link >= 0 && body.rate_seller_link <= 50 && body.rate_marketplace >= 0 && body.rate_marketplace <= 50)) { $('#stE').textContent = 'النسبة لازم تكون بين 0 و 50'; return; }
         s.rest('fs_settings', 'id=eq.1', { method: 'PATCH', body: body }).then(function () { F.toast('انحفظت الإعدادات'); settingsView(); }).catch(function (x) { $('#stE').textContent = F.errText(x); });
       };

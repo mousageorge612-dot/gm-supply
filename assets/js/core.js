@@ -94,10 +94,13 @@
   function $(s, r) { return (r || document).querySelector(s); }
   function $$(s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function syp(n) {
+  function usdFmt(u) { u = Math.round(u * 100) / 100; return '$' + u.toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  // Prices are shown in dollars and Syrian pounds together. rate = SYP per 1 USD (FS.rate from settings, or an order's own rate).
+  function syp(n, rate) {
     if (n == null || n === '') return '';
-    var v = Math.round(Number(n) || 0);
-    return '<span class="num ltr">' + v.toLocaleString('en-US') + '</span> ل.س';
+    var v = Math.round(Number(n) || 0), r = rate === undefined ? window.FS.rate : rate;
+    var s = '<span class="num ltr">' + v.toLocaleString('en-US') + '</span> ل.س';
+    return r > 0 && v ? '<span class="num ltr">' + usdFmt(v / r) + '</span> · ' + s : s;
   }
   function sypText(n) { return Math.round(Number(n) || 0).toLocaleString('en-US') + ' ل.س'; }
   function ltr(s) { return '<span class="ltr num">' + esc(s) + '</span>'; }
@@ -178,7 +181,7 @@
     img: '<svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#9aa0a8" stroke-width="1.5" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 17-5-5-8 8"/></svg>'
   };
 
-  window.FS = { URL: URL_, DOMAINS: DOMAINS, raw: raw, rest: rest, rpc: rpc, fn: fn, Session: Session, media: media, shrink: shrink, uid: uid,
+  window.FS = { rate: null, URL: URL_, DOMAINS: DOMAINS, raw: raw, rest: rest, rpc: rpc, fn: fn, Session: Session, media: media, shrink: shrink, uid: uid,
     $: $, $$: $$, esc: esc, syp: syp, sypText: sypText, ltr: ltr, date: date, day: day, toast: toast, errText: errText,
     sheet: sheet, closeSheet: closeSheet, copy: copy, waLink: waLink,
     GOVS: GOVS, STATUS: STATUS, NEXT: NEXT, PSTATUS: PSTATUS, SSTATUS: SSTATUS, RSTATUS: RSTATUS, SOURCE: SOURCE, KIND: KIND, ICON: ICON };
