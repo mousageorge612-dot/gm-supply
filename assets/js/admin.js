@@ -232,7 +232,7 @@
       $('#view').innerHTML = '<div class="note info small">العمولة على المنتجات المسلّمة بعد الخصم وبدون الشحن. المرتجعات بتنطرح بالأسبوع اللي انسجّلت فيه. الأسبوع بيبلّش يوم الإثنين بتوقيت دمشق.</div>' +
         (rows.length ? '<div class="scroll-x"><table class="tbl"><tr><th>الأسبوع</th><th>المتجر</th><th>صافي المبيعات</th><th>العمولة</th><th>الحالة</th><th></th></tr>' +
           rows.map(function (r) {
-            return '<tr><td>' + F.day(r.week_start) + '</td><td>' + esc(r.seller_name) + '</td><td class="num">' + Math.round(r.net_sales).toLocaleString('en-US') + '</td><td class="num"><b>' + Math.round(r.commission).toLocaleString('en-US') + '</b></td>' +
+            return '<tr><td>' + F.day(r.week_start) + '</td><td>' + esc(r.seller_name) + '</td><td><span class="ltr num">' + Math.round(r.net_sales).toLocaleString('en-US') + '</span></td><td><b class="ltr num">' + Math.round(r.commission).toLocaleString('en-US') + '</b></td>' +
               '<td>' + (r.paid ? '<span class="pill ok">تمت التسوية</span>' : '<span class="pill new">مفتوح</span>') + '</td><td><button class="btn sm ghost" data-det="' + r.seller_id + '" type="button">التفاصيل</button>' +
               (r.paid ? '' : ' <button class="btn sm" data-pay="' + r.seller_id + '" data-wk="' + r.week_start + '" data-amt="' + r.commission + '" type="button">تسجيل الاستلام</button>') + '</td></tr>';
           }).join('') + '</table></div>' : '<div class="empty">ما في عمولات بعد. بتظهر لما تاجر يسجّل أول طلب «تم التسليم».</div>');
@@ -252,7 +252,7 @@
           s.rpc('fs_statement', { p_seller: +b.dataset.det }).then(function (ws) {
             F.sheet('<h2>كشف ' + esc(sellerName(+b.dataset.det)) + '</h2>' + ws.map(function (w) {
               return '<div class="panel"><b>أسبوع ' + F.day(w.week_start) + '</b> · عمولة ' + F.syp(w.commission) + '<div class="scroll-x"><table class="tbl"><tr><th>الطلب</th><th>الحركة</th><th>النسبة</th><th>الأساس</th><th>العمولة</th></tr>' +
-                w.entries.map(function (e) { return '<tr><td>' + F.ltr(e.order_number) + '</td><td>' + F.KIND[e.kind] + '</td><td class="num">' + Number(e.rate) + '%</td><td class="num">' + Math.round(e.base_delta).toLocaleString('en-US') + '</td><td class="num">' + Math.round(e.amount).toLocaleString('en-US') + '</td></tr>'; }).join('') + '</table></div></div>';
+                w.entries.map(function (e) { return '<tr><td>' + F.ltr(e.order_number) + '</td><td>' + F.KIND[e.kind] + '</td><td><span class="ltr num">' + Number(e.rate) + '%</span></td><td><span class="ltr num">' + Math.round(e.base_delta).toLocaleString('en-US') + '</span></td><td><span class="ltr num">' + Math.round(e.amount).toLocaleString('en-US') + '</span></td></tr>'; }).join('') + '</table></div></div>';
             }).join(''));
           });
         };

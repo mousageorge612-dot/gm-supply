@@ -155,7 +155,7 @@
       }).join('') +
       '<div class="sum" style="margin:8px 0"><div class="r small"><span>المنتجات</span><span>' + F.syp(o.subtotal) + '</span></div>' +
       '<div class="r small"><span>الشحن</span><span>' + (o.delivery_method === 'pickup' ? 'استلام من ' + esc(o.pickup_branch) : (o.shipping_fee == null ? 'غير محدد (' + esc(o.shipping_company) + ')' : F.syp(o.shipping_fee) + ' · ' + esc(o.shipping_company))) + '</span></div>' +
-      '<div class="r"><b>المجموع</b><b>' + F.syp(o.total) + '</b></div>' +
+      '<div class="r"><b>' + (o.shipping_fee == null ? 'المجموع بدون الشحن' : 'المجموع') + '</b><b>' + F.syp(o.total) + '</b></div>' +
       (o.status === 'delivered' || o.status === 'returned' ? '<div class="r small muted"><span>عمولة سبلاي</span><span>' + F.syp(o.commission_amount) + '</span></div>' : '') + '</div>' +
       '<dl class="kv"><dt>الزبون</dt><dd>' + esc(o.customer_name) + '</dd><dt>الموبايل</dt><dd><a href="tel:' + esc(o.phone) + '">' + F.ltr(o.phone) + '</a></dd>' +
       '<dt>المحافظة</dt><dd>' + esc(o.governorate) + (o.city ? '، ' + esc(o.city) : '') + '</dd>' + (o.address ? '<dt>العنوان</dt><dd>' + esc(o.address) + '</dd>' : '') +
@@ -330,7 +330,7 @@
             '<div class="stats"><div class="stat"><b>' + w.delivered_orders + '</b><span>طلب مسلّم</span></div><div class="stat"><b class="num">' + Math.round(w.net_sales).toLocaleString('en-US') + '</b><span>صافي المبيعات (ل.س)</span></div>' +
             '<div class="stat"><b class="num">' + Math.round(w.commission).toLocaleString('en-US') + '</b><span>العمولة المستحقة (ل.س)</span></div></div>' +
             '<div class="scroll-x"><table class="tbl"><tr><th>الطلب</th><th>الحركة</th><th>المصدر</th><th>الأساس</th><th>العمولة</th></tr>' +
-            w.entries.map(function (e) { return '<tr><td>' + F.ltr(e.order_number) + '</td><td>' + F.KIND[e.kind] + '</td><td>' + F.SOURCE[e.source] + ' <span class="num">' + Number(e.rate) + '%</span></td><td class="num">' + Math.round(e.base_delta).toLocaleString('en-US') + '</td><td class="num">' + Math.round(e.amount).toLocaleString('en-US') + '</td></tr>'; }).join('') +
+            w.entries.map(function (e) { return '<tr><td>' + F.ltr(e.order_number) + '</td><td>' + F.KIND[e.kind] + '</td><td>' + F.SOURCE[e.source] + ' <span class="ltr num">' + Number(e.rate) + '%</span></td><td><span class="ltr num">' + Math.round(e.base_delta).toLocaleString('en-US') + '</span></td><td><span class="ltr num">' + Math.round(e.amount).toLocaleString('en-US') + '</span></td></tr>'; }).join('') +
             '</table></div>' + (w.paid ? '<p class="small muted">انسوّت ' + F.date(w.paid.paid_at) + (w.paid.note ? ' · ' + esc(w.paid.note) : '') + '</p>' : '') + '</div>';
         }).join('') : '<div class="empty">ما في حركات بعد. العمولة بتظهر هون لما تسجّل أول طلب «تم التسليم».</div>');
     }).catch(function (x) { $('#view').innerHTML = '<div class="note bad">' + esc(F.errText(x)) + '</div>'; });

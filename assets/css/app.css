@@ -22,7 +22,7 @@ img{max-width:100%;display:block}
 a{color:inherit}
 button,input,select,textarea{font:inherit;color:inherit}
 [hidden]{display:none!important}
-.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block}
+.ltr{direction:ltr;unicode-bidi:isolate;display:inline-block;white-space:nowrap}
 .num{font-family:var(--en);font-variant-numeric:tabular-nums}
 .muted{color:var(--ink2)}
 .small{font-size:13px}
