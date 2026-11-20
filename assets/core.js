@@ -35,15 +35,16 @@
     return raw('/auth/v1/token?grant_type=refresh_token', { method: 'POST', body: { refresh_token: s.a.refresh } })
       .then(function (j) { s.save(j); return s.a.token; }, function (e) { if (e.status === 400 || e.status === 401) s.clear(); throw e; });
   };
-  Session.prototype.login = function (user, pass) {
+  Session.prototype.login = function (user, pass, domain) {
     var s = this, u = String(user || '').trim().toLowerCase();
-    var email = u.indexOf('@') > 0 ? u : u + '@clients.georgemousa.com';
+    var email = u.indexOf('@') > 0 ? u : u + (domain || '@clients.georgemousa.com');
     return raw('/auth/v1/token?grant_type=password', { method: 'POST', body: { email: email, password: pass } }).then(function (j) { s.save(j); });
   };
   Session.prototype.rest = function (table, query, o) {
     o = o || {}; return this.token().then(function (t) { o.token = t; return rest(table, query, o); });
   };
   Session.prototype.rpc = function (fn, body) { return this.token().then(function (t) { return rpc(fn, body, { token: t }); }); };
+  Session.prototype.fn = function (name, body) { return this.token().then(function (t) { return raw('/functions/v1/' + name, { method: 'POST', body: body, token: t }); }); };
   Session.prototype.upload = function (path, blob) {
     return this.token().then(function (t) {
       return fetch(URL_ + '/storage/v1/object/' + BUCKET + '/' + path, { method: 'POST',
@@ -82,6 +83,7 @@
     var m = String((e && e.message) || e || '');
     if (/invalid login|invalid_grant|credentials/i.test(m)) return 'اسم المستخدم أو كلمة المرور غلط';
     if (/failed to fetch|network/i.test(m)) return 'ما في اتصال بالإنترنت';
+    if (/not_coach/.test(m)) return 'ما عندك صلاحية';
     if (/unavailable/.test(m)) return 'في منتج بالسلة صار غير متوفر، شيله وجرب مرة تانية';
     if (/missing_fields/.test(m)) return 'عبّي الاسم والرقم والمحافظة';
     return m || 'صار خطأ';

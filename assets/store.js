@@ -2,17 +2,21 @@
 (function () {
   'use strict';
   var G = window.GS, $ = G.$, esc = G.esc, money = G.money;
-  var P = [], BY = {}, CFG = { whatsapp: '963987461750' }, CAT = 'الكل', Q = '';
+  var P = [], BY = {}, CFG = { whatsapp: '963987461750' }, CAT = 'الكل', Q = '', LIM = 24;
   var CK = 'gms-cart', CODEK = 'gms-code';
   var cart = load(CK) || [];          // [{id, option, qty}]
   var code = load(CODEK) || null;     // {code, pct}
 
   function load(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
   function store(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
-  function saveCart() { cart = cart.filter(function (l) { return BY[l.id] || !P.length; }); store(CK, cart); badge(); }
-  function badge() { $('#cartN').textContent = cart.reduce(function (s, l) { return s + l.qty; }, 0); }
+  function saveCart() { cart = cart.filter(function (l) { return !P.length || (BY[l.id] && +BY[l.id].price_usd > 0); }); store(CK, cart); badge(); }
+  function badge() {
+    var n = cart.reduce(function (s, l) { return s + l.qty; }, 0); $('#cartN').textContent = n;
+    var bar = $('#cartBar'); if (!bar) return; bar.hidden = !n;
+    if (n) { var t = 0; cart.forEach(function (l) { if (BY[l.id]) t += BY[l.id].price_usd * l.qty; }); $('#cartBarT').textContent = n + ' · ' + money(t); }
+  }
 
-  /* URL ?code=GM15 pre-fills the subscriber code */
+  /* URL ?code=XXX pre-fills a discount code */
   var urlCode = new URLSearchParams(location.search).get('code');
 
   Promise.all([
@@ -32,8 +36,10 @@
     var cats = ['الكل']; P.forEach(function (p) { if (p.category && cats.indexOf(p.category) < 0) cats.push(p.category); });
     $('#chips').innerHTML = cats.length < 3 ? '' : cats.map(function (c) { return '<button class="chip' + (c === CAT ? ' on' : '') + '" data-c="' + esc(c) + '">' + esc(c) + '</button>'; }).join('');
   }
-  $('#chips').addEventListener('click', function (e) { var b = e.target.closest('.chip'); if (!b) return; CAT = b.dataset.c; chips(); render(); });
-  $('#q').addEventListener('input', function (e) { Q = e.target.value.trim().toLowerCase(); render(); });
+  $('#chips').addEventListener('click', function (e) { var b = e.target.closest('.chip'); if (!b) return; CAT = b.dataset.c; LIM = 24; chips(); render(); });
+  $('#q').addEventListener('input', function (e) { Q = e.target.value.trim().toLowerCase(); LIM = 24; render(); });
+  function priced(p) { return +p.price_usd > 0; }
+  function ask(p) { return 'https://wa.me/' + CFG.whatsapp + '?text=' + encodeURIComponent('مرحبا، بدي اسأل عن سعر: ' + p.name + (p.brand ? ' (' + p.brand + ')' : '')); }
 
   function img(p) { return p.image ? '<img src="' + esc(G.media(p.image)) + '" alt="' + esc(p.name) + '" loading="lazy">' : '<span class="noimg">GM</span>'; }
   function render() {
@@ -44,17 +50,21 @@
     });
     if (!P.length) { $('#grid').innerHTML = '<div class="empty">المنتجات قريباً جداً 🔥<br>تابعنا، وإذا بدك شي معيّن <a href="https://wa.me/' + CFG.whatsapp + '" target="_blank" rel="noopener">راسلنا واتساب</a>.</div>'; return; }
     if (!list.length) { $('#grid').innerHTML = '<div class="empty">ما في نتائج.</div>'; return; }
-    $('#grid').innerHTML = list.map(function (p) {
-      var off = p.old_price_usd && +p.old_price_usd > +p.price_usd ? Math.round((1 - p.price_usd / p.old_price_usd) * 100) : 0;
+    var more = list.length > LIM;
+    $('#grid').innerHTML = list.slice(0, LIM).map(function (p) {
+      var off = priced(p) && p.old_price_usd && +p.old_price_usd > +p.price_usd ? Math.round((1 - p.price_usd / p.old_price_usd) * 100) : 0;
+      var btn = !p.in_stock ? '<button class="btn sm block" disabled>غير متوفر</button>'
+        : priced(p) ? '<button class="btn sm block" data-add="' + p.id + '">أضف للسلة</button>'
+        : '<a class="btn ghost sm block" href="' + ask(p) + '" target="_blank" rel="noopener" data-ask>اسأل عن السعر</a>';
       return '<article class="card" data-id="' + p.id + '"><div class="ph">' + img(p) +
         (!p.in_stock ? '<span class="badge out">نفدت الكمية</span>' : off ? '<span class="badge" dir="ltr">-' + off + '%</span>' : '') +
-        '<span class="badge orig">أصلي ✓</span></div><div class="bd">' +
-        (p.brand ? '<span class="br">' + esc(p.brand) + '</span>' : '') + '<h3>' + esc(p.name) + '</h3>' +
-        '<div class="price"><b>' + money(p.price_usd) + '</b>' + (off ? '<s>' + money(p.old_price_usd) + '</s>' : '') + '</div>' +
-        '<button class="btn sm block" data-add="' + p.id + '"' + (p.in_stock ? '' : ' disabled') + '>' + (p.in_stock ? 'أضف للسلة' : 'غير متوفر') + '</button></div></article>';
-    }).join('');
+        '</div><div class="bd">' + (p.brand ? '<span class="br">' + esc(p.brand) + '</span>' : '') + '<h3 dir="auto">' + esc(p.name) + '</h3>' +
+        '<div class="price">' + (priced(p) ? '<b>' + money(p.price_usd) + '</b>' + (off ? '<s>' + money(p.old_price_usd) + '</s>' : '') : '<span class="ask">السعر عند الطلب</span>') + '</div>' + btn + '</div></article>';
+    }).join('') + (more ? '<button class="btn ghost block more" id="more">عرض المزيد (' + (list.length - LIM) + ')</button>' : '');
   }
   $('#grid').addEventListener('click', function (e) {
+    if (e.target.closest('[data-ask]')) return;
+    if (e.target.closest('#more')) { LIM += 24; render(); return; }
     var a = e.target.closest('[data-add]'); var c = e.target.closest('.card');
     if (a) { e.stopPropagation(); var p = BY[a.dataset.add]; if (p.options && p.options.length) detail(p); else add(p.id, ''); return; }
     if (c) detail(BY[c.dataset.id]);
@@ -69,12 +79,12 @@
   function detail(p) {
     var opts = p.options || [];
     G.sheet('<div class="pd-img">' + img(p) + '</div>' + (p.brand ? '<div class="br" style="color:var(--gold);font-weight:700">' + esc(p.brand) + '</div>' : '') +
-      '<h2>' + esc(p.name) + '</h2><div class="price" style="padding:0 0 10px"><b>' + money(p.price_usd) + '</b>' +
-      (p.old_price_usd && +p.old_price_usd > +p.price_usd ? '<s>' + money(p.old_price_usd) + '</s>' : '') + '</div>' +
+      '<h2 dir="auto">' + esc(p.name) + '</h2><div class="price" style="padding:0 0 10px">' + (priced(p) ? '<b>' + money(p.price_usd) + '</b>' +
+      (p.old_price_usd && +p.old_price_usd > +p.price_usd ? '<s>' + money(p.old_price_usd) + '</s>' : '') : '<span class="ask">السعر عند الطلب</span>') + '</div>' +
       (p.description ? '<div class="pd-desc">' + esc(p.description) + '</div>' : '') +
       (opts.length ? '<div class="field" style="margin-top:12px"><label>اختار النكهة / الحجم</label><select class="inp" id="opt">' + opts.map(function (o) { return '<option>' + esc(o) + '</option>'; }).join('') + '</select></div>' : '') +
-      '<div class="note">✓ منتج أصلي ومضمون، مختار من الكوتش جورج موسى.</div>' +
-      '<button class="btn block" id="addD"' + (p.in_stock ? '' : ' disabled') + '>' + (p.in_stock ? 'أضف للسلة' : 'نفدت الكمية') + '</button>',
+      (p.in_stock && !priced(p) ? '<a class="btn wa block" href="' + ask(p) + '" target="_blank" rel="noopener">اسأل عن السعر على واتساب</a>' :
+      '<button class="btn block" id="addD"' + (p.in_stock ? '' : ' disabled') + '>' + (p.in_stock ? 'أضف للسلة' : 'نفدت الكمية') + '</button>'),
       function (b) { var x = $('#addD', b); if (x) x.onclick = function () { add(p.id, opts.length ? $('#opt', b).value : ''); G.closeSheet(); }; });
   }
 
@@ -84,16 +94,16 @@
     return { sub: sub, pct: pct, disc: d, total: sub - d };
   }
 
-  $('#cartBtn').onclick = openCart;
+  $('#cartBtn').onclick = openCart; $('#cartBar').onclick = openCart;
   function openCart() {
     if (!cart.length) { G.sheet('<h2>السلة</h2><div class="empty" style="padding:30px 0">السلة فاضية.</div><button class="btn block" data-close>تصفّح المنتجات</button>'); return; }
     var t = totals();
     G.sheet('<h2>السلة</h2><div id="lines">' + cart.map(function (l, i) {
       var p = BY[l.id]; if (!p) return '';
-      return '<div class="ci"><div class="im">' + img(p) + '</div><div><h4>' + esc(p.name) + '</h4><small>' + esc(l.option || p.brand || '') + ' · ' + money(p.price_usd) + '</small></div>' +
+      return '<div class="ci"><div class="im">' + img(p) + '</div><div><h4 dir="auto">' + esc(p.name) + '</h4><small>' + esc(l.option || p.brand || '') + ' · ' + money(p.price_usd) + '</small></div>' +
         '<div class="qty"><button data-q="' + i + '" data-d="-1">−</button><b>' + l.qty + '</b><button data-q="' + i + '" data-d="1">+</button></div></div>';
     }).join('') + '</div>' +
-      '<div class="code"><input class="inp" id="code" placeholder="كود خصم المشتركين" value="' + esc(code ? code.code : '') + '"><button class="btn ghost sm" id="codeBtn">' + (code ? 'إلغاء' : 'تطبيق') + '</button></div>' +
+      '<div class="code"><input class="inp" id="code" placeholder="كود الخصم" value="' + esc(code ? code.code : '') + '"><button class="btn ghost sm" id="codeBtn">' + (code ? 'إلغاء' : 'تطبيق') + '</button></div>' +
       '<div id="codeMsg">' + (code ? '<span class="ok">✓ خصم ' + code.pct + '% مفعّل</span>' : '') + '</div>' +
       '<div class="sum"><div><span>المجموع</span><span>' + money(t.sub) + '</span></div>' + (t.pct ? '<div class="ok"><span>خصم ' + t.pct + '%</span><span>−' + money(t.disc) + '</span></div>' : '') +
       '<div class="t"><span>الإجمالي</span><span>' + money(t.total) + '</span></div></div>' +

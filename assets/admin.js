@@ -3,12 +3,12 @@
   'use strict';
   var G = window.GS, $ = G.$, esc = G.esc, money = G.money;
   var S = new G.Session('gms-admin');
-  var TAB = 'orders', OF = 'active', PRODUCTS = [];
+  var TAB = 'orders', OF = 'active', PRODUCTS = [], VENDORS = [], PF = 'all', PQ = '';
 
   function start() {
     if (!S.a) return loginView();
     S.rpc('is_coach', {}).then(function (ok) {
-      if (!ok) { S.clear(); G.toast('هالحساب مو حساب المدرب'); return loginView(); }
+      if (!ok) { S.clear(); G.toast('هالحساب مو حساب إدارة'); return loginView(); }
       $('#out').hidden = false; shell();
     }).catch(function () { S.clear(); loginView(); });
   }
@@ -19,18 +19,18 @@
     $('#app').innerHTML = '<form class="login" id="lf"><img src="../assets/img/logo-full.webp" alt="GM Supply"><h2 style="margin:0 0 14px">لوحة التحكم</h2>' +
       '<div class="field"><input class="inp" name="u" placeholder="اسم المستخدم" autocomplete="username" dir="ltr"></div>' +
       '<div class="field"><input class="inp" name="p" type="password" placeholder="كلمة المرور" autocomplete="current-password" dir="ltr"></div>' +
-      '<button class="btn block">دخول</button><p style="color:var(--muted);font-size:13px">نفس حساب المدرب تبع لوحة GM Coach</p></form>';
+      '<button class="btn block">دخول</button><p style="color:var(--muted);font-size:13px">إذا انت تاجر، ادخل من <a href="../vendor/">لوحة التجار</a></p></form>';
     $('#lf').onsubmit = function (e) {
       e.preventDefault(); var f = e.target;
       S.login(f.u.value, f.p.value).then(start).catch(function (er) { G.toast(G.errText(er)); });
     };
   }
 
-  var TABS = [['orders', 'الطلبات'], ['products', 'المنتجات'], ['codes', 'أكواد الخصم'], ['settings', 'الإعدادات']];
+  var TABS = [['orders', 'الطلبات'], ['products', 'المنتجات'], ['vendors', 'التجار'], ['codes', 'أكواد الخصم'], ['settings', 'الإعدادات']];
   function shell() {
     $('#app').innerHTML = '<div class="tabs">' + TABS.map(function (t) { return '<button class="chip' + (t[0] === TAB ? ' on' : '') + '" data-t="' + t[0] + '">' + t[1] + '</button>'; }).join('') + '</div><div id="view"></div>';
     $('.tabs').onclick = function (e) { var b = e.target.closest('[data-t]'); if (b) { TAB = b.dataset.t; shell(); } };
-    ({ orders: orders, products: products, codes: codes, settings: settings })[TAB]();
+    ({ orders: orders, products: products, vendors: vendors, codes: codes, settings: settings })[TAB]();
   }
   function fail(e) { G.toast(G.errText(e)); }
 
@@ -65,7 +65,7 @@
     var d = new Date(o.created_at);
     return '<div class="it"><div class="hd"><div><h3>#' + o.id + ' · ' + esc(o.name) + '</h3><small>' + d.toLocaleDateString('ar-SY') + ' ' + d.toLocaleTimeString('ar-SY', { hour: '2-digit', minute: '2-digit' }) + ' · ' + esc(o.city) + '</small></div>' +
       '<span class="pill st-' + o.status + '">' + G.STATUS[o.status] + '</span></div>' +
-      '<ul>' + o.items.map(function (l) { return '<li>' + esc(l.name) + (l.option ? ' (' + esc(l.option) + ')' : '') + ' × ' + l.qty + ' — ' + money(l.price * l.qty) + '</li>'; }).join('') + '</ul>' +
+      '<ul>' + o.items.map(function (l) { return '<li>' + esc(l.name) + (l.option ? ' (' + esc(l.option) + ')' : '') + ' × ' + l.qty + ' — ' + money(l.price * l.qty) + (l.vendor ? ' <small style="color:var(--gold2)">· ' + esc(l.vendor) + '</small>' : '') + '</li>'; }).join('') + '</ul>' +
       '<div><b style="color:var(--gold)">' + money(o.total) + '</b>' + (o.discount_pct ? ' <small>(خصم ' + o.discount_pct + '% بكود ' + esc(o.discount_code) + ')</small>' : '') + '</div>' +
       (o.address ? '<small>📍 ' + esc(o.address) + '</small><br>' : '') + (o.notes ? '<small>📝 ' + esc(o.notes) + '</small><br>' : '') +
       (o.admin_note ? '<small style="color:var(--gold2)">🔒 ' + esc(o.admin_note) + '</small>' : '') +
@@ -75,18 +75,43 @@
   }
 
   /* ---------------- products ---------------- */
+  function vname(id) { var v = VENDORS.filter(function (x) { return x.id == id; })[0]; return v ? v.name : ''; }
+  function loadVendors() { return S.rest('supply_vendors', 'select=*&order=id.asc').then(function (v) { VENDORS = v; }); }
   function products() {
-    S.rest('supply_products', 'select=*&order=active.desc,featured.desc,sort.asc,id.desc').then(function (list) {
-      PRODUCTS = list;
-      $('#view').innerHTML = '<button class="btn block" id="newP" style="margin-bottom:12px">+ منتج جديد</button><div class="list">' +
-        (list.length ? list.map(function (p) {
-          return '<div class="it prow"><div class="im">' + (p.image ? '<img src="' + esc(G.media(p.image)) + '" alt="">' : '') + '</div><div><h3>' + esc(p.name) + '</h3><small>' + esc(p.brand || '') + (p.category ? ' · ' + esc(p.category) : '') + '</small><br>' +
-            '<b style="color:var(--gold)">' + money(p.price_usd) + '</b> ' + (!p.active ? '<span class="pill">مخفي</span> ' : '') + (!p.in_stock ? '<span class="pill st-cancelled">نفد</span> ' : '') + (p.featured ? '<span class="pill st-new">مميز</span>' : '') + '</div>' +
-            '<button class="btn ghost sm" data-e="' + p.id + '">تعديل</button></div>';
-        }).join('') : '<div class="empty">ما في منتجات بعد. ضيف أول منتج.</div>') + '</div>';
-      $('#newP').onclick = function () { editP({ active: true, in_stock: true, options: [], sort: 0 }); };
-      $('#view .list').onclick = function (e) { var b = e.target.closest('[data-e]'); if (b) editP(PRODUCTS.filter(function (p) { return p.id == b.dataset.e; })[0]); };
+    Promise.all([S.rest('supply_products', 'select=*&order=sort.asc,id.asc'), loadVendors()]).then(function (r) {
+      PRODUCTS = r[0];
+      var pend = PRODUCTS.filter(function (p) { return !p.active && p.vendor_id && vname(p.vendor_id) !== 'GM Supply' && !p.review_note; }).length;
+      var noP = PRODUCTS.filter(function (p) { return !(+p.price_usd > 0); }).length;
+      var F = [['all', 'الكل (' + PRODUCTS.length + ')'], ['noprice', 'بدون سعر (' + noP + ')'], ['pending', 'بانتظار الموافقة (' + pend + ')'], ['hidden', 'مخفي'], ['out', 'نفد']];
+      $('#view').innerHTML = '<button class="btn block" id="newP" style="margin-bottom:10px">+ منتج جديد</button>' +
+        '<input class="search" id="pq" placeholder="ابحث بالاسم أو الماركة أو التاجر" value="' + esc(PQ) + '" style="margin-bottom:8px">' +
+        '<div class="chips" style="margin-bottom:12px">' + F.map(function (f) { return '<button class="chip' + (f[0] === PF ? ' on' : '') + '" data-pf="' + f[0] + '">' + f[1] + '</button>'; }).join('') + '</div><div class="list" id="plist"></div>';
+      $('#newP').onclick = function () { editP({ active: true, in_stock: true, options: [], sort: 0, vendor_id: (VENDORS.filter(function (v) { return v.name === 'GM Supply'; })[0] || {}).id }); };
+      $('#view .chips').onclick = function (e) { var b = e.target.closest('[data-pf]'); if (b) { PF = b.dataset.pf; products(); } };
+      $('#pq').oninput = function (e) { PQ = e.target.value.trim().toLowerCase(); plist(); };
+      $('#plist').onclick = function (e) {
+        var ap = e.target.closest('[data-ap]'); if (ap) { e.stopPropagation(); S.rest('supply_products', 'id=eq.' + ap.dataset.ap, { method: 'PATCH', body: { active: true, review_note: null } }).then(function () { G.toast('انعرض بالمتجر ✓'); products(); }, fail); return; }
+        var b = e.target.closest('[data-e]'); if (b) editP(PRODUCTS.filter(function (p) { return p.id == b.dataset.e; })[0]);
+      };
+      plist();
     }, fail);
+  }
+  function plist() {
+    var list = PRODUCTS.filter(function (p) {
+      if (PF === 'noprice' && +p.price_usd > 0) return false;
+      if (PF === 'pending' && (p.active || vname(p.vendor_id) === 'GM Supply' || p.review_note)) return false;
+      if (PF === 'hidden' && p.active) return false;
+      if (PF === 'out' && p.in_stock) return false;
+      if (PQ && (p.name + ' ' + (p.brand || '') + ' ' + vname(p.vendor_id) + ' ' + (p.category || '')).toLowerCase().indexOf(PQ) < 0) return false;
+      return true;
+    });
+    $('#plist').innerHTML = list.length ? list.slice(0, 150).map(function (p) {
+      var pending = !p.active && p.vendor_id && vname(p.vendor_id) !== 'GM Supply';
+      return '<div class="it prow"><div class="im">' + (p.image ? '<img loading="lazy" src="' + esc(G.media(p.image)) + '" alt="">' : '') + '</div><div><h3>' + esc(p.name) + '</h3><small>' + esc(p.brand || '') + (p.category ? ' · ' + esc(p.category) : '') + (p.vendor_id ? ' · 🏪 ' + esc(vname(p.vendor_id)) : '') + '</small><br>' +
+        (+p.price_usd > 0 ? '<b style="color:var(--gold)">' + money(p.price_usd) + '</b> ' : '<span class="pill st-new">بدون سعر</span> ') + (!p.active ? '<span class="pill">' + (pending ? 'بانتظار الموافقة' : 'مخفي') + '</span> ' : '') + (!p.in_stock ? '<span class="pill st-cancelled">نفد</span> ' : '') + (p.featured ? '<span class="pill st-delivered">مميز</span>' : '') +
+        (pending ? '<div><button class="btn sm" data-ap="' + p.id + '" style="margin-top:6px">موافقة وعرض</button></div>' : '') + '</div>' +
+        '<button class="btn ghost sm" data-e="' + p.id + '">تعديل</button></div>';
+    }).join('') + (list.length > 150 ? '<div class="empty">في ' + (list.length - 150) + ' منتج كمان، استعمل البحث.</div>' : '') : '<div class="empty">ما في منتجات هون.</div>';
   }
   function editP(p) {
     var cats = []; PRODUCTS.forEach(function (x) { if (x.category && cats.indexOf(x.category) < 0) cats.push(x.category); });
@@ -101,6 +126,8 @@
       '<div class="field"><label>السعر القديم $ (للعروض)</label><input class="inp" name="old" type="number" step="0.01" min="0" value="' + esc(p.old_price_usd || '') + '"></div></div>' +
       '<div class="field"><label>النكهات / الأحجام (افصل بفاصلة)</label><input class="inp" name="options" placeholder="شوكولا، فانيلا، فريز" value="' + esc((p.options || []).join('، ')) + '"></div>' +
       '<div class="field"><label>الوصف</label><textarea class="inp" name="description" rows="4">' + esc(p.description || '') + '</textarea></div>' +
+      '<div class="field"><label>التاجر</label><select class="inp" name="vendor"><option value="">—</option>' + VENDORS.map(function (v) { return '<option value="' + v.id + '"' + (v.id == p.vendor_id ? ' selected' : '') + '>' + esc(v.name) + '</option>'; }).join('') + '</select></div>' +
+      '<div class="field"><label>ملاحظة للتاجر (سبب الرفض أو تعديل مطلوب)</label><input class="inp" name="review_note" value="' + esc(p.review_note || '') + '"></div>' +
       '<div class="field"><label>الترتيب (رقم أصغر = أول)</label><input class="inp" name="sort" type="number" value="' + (p.sort || 0) + '"></div>' +
       '<label class="chk"><input type="checkbox" name="in_stock"' + (p.in_stock ? ' checked' : '') + '> متوفر</label>' +
       '<label class="chk"><input type="checkbox" name="featured"' + (p.featured ? ' checked' : '') + '> مميز (يطلع أول)</label>' +
@@ -116,7 +143,8 @@
           var row = { name: f.name.value.trim(), brand: f.brand.value.trim() || null, category: f.category.value.trim() || null,
             price_usd: +f.price.value || 0, old_price_usd: +f.old.value || null, description: f.description.value.trim() || null,
             options: f.options.value.split(/[،,]/).map(function (s) { return s.trim(); }).filter(Boolean),
-            sort: +f.sort.value || 0, in_stock: f.in_stock.checked, featured: f.featured.checked, active: f.active.checked };
+            sort: +f.sort.value || 0, in_stock: f.in_stock.checked, featured: f.featured.checked, active: f.active.checked,
+            vendor_id: +f.vendor.value || null, review_note: f.review_note.value.trim() || null };
           var up = newImg ? S.upload('products/' + Date.now() + '.webp', newImg).then(function (u) { row.image = u; }) : Promise.resolve();
           up.then(function () {
             return p.id ? S.rest('supply_products', 'id=eq.' + p.id, { method: 'PATCH', body: row })
@@ -131,10 +159,41 @@
       });
   }
 
+  /* ---------------- vendors ---------------- */
+  function vendors() {
+    Promise.all([loadVendors(), S.rest('supply_products', 'select=vendor_id,active')]).then(function (r) {
+      var cnt = {}; r[1].forEach(function (p) { var c = cnt[p.vendor_id] = cnt[p.vendor_id] || [0, 0]; c[0]++; if (!p.active) c[1]++; });
+      $('#view').innerHTML = '<form class="it" id="vf"><h3 style="margin-bottom:8px">تاجر جديد</h3>' +
+        '<div class="field"><label>اسم المحل / التاجر *</label><input class="inp" name="name" required></div>' +
+        '<div class="row2"><div class="field"><label>اسم المستخدم (إنكليزي) *</label><input class="inp" name="username" required dir="ltr" pattern="[a-z0-9._-]{3,24}" placeholder="ahmad"></div>' +
+        '<div class="field"><label>كلمة السر *</label><input class="inp" name="password" required dir="ltr" minlength="6"></div></div>' +
+        '<div class="row2"><div class="field"><label>الموبايل</label><input class="inp" name="phone" dir="ltr"></div><div class="field"><label>المدينة</label><input class="inp" name="city"></div></div>' +
+        '<button class="btn block">إنشاء حساب التاجر</button><p style="color:var(--muted);font-size:13px;margin:8px 0 0">التاجر بيدخل من supply.georgemousa.com/vendor بنفس اسم المستخدم وكلمة السر.</p></form>' +
+        '<div class="list" style="margin-top:12px">' + VENDORS.map(function (v) {
+          var c = cnt[v.id] || [0, 0];
+          return '<div class="it"><div class="hd"><div><h3>' + esc(v.name) + '</h3><small>' + (v.username ? '<span dir="ltr">' + esc(v.username) + '</span> · ' : 'المخزون الأساسي · ') + c[0] + ' منتج' + (c[1] ? ' (' + c[1] + ' مخفي أو بانتظار الموافقة)' : '') + (v.phone ? ' · ' + esc(v.phone) : '') + (v.city ? ' · ' + esc(v.city) : '') + '</small></div>' +
+            '<span class="pill' + (v.active ? ' st-delivered' : '') + '">' + (v.active ? 'فعّال' : 'موقوف') + '</span></div>' +
+            (v.user_id ? '<div class="acts"><button class="btn ghost sm" data-vt="' + v.id + '" data-a="' + (v.active ? 0 : 1) + '">' + (v.active ? 'إيقاف الحساب' : 'تفعيل') + '</button><button class="btn ghost sm" data-pw="' + v.id + '">كلمة سر جديدة</button>' +
+              '<button class="btn ghost sm" data-vp="' + esc(v.name) + '">منتجاته</button></div>' : '') + '</div>';
+        }).join('') + '</div>';
+      $('#vf').onsubmit = function (e) {
+        e.preventDefault(); var f = e.target, btn = f.querySelector('button'); btn.disabled = true;
+        S.fn('supply-admin', { action: 'create_vendor', name: f.name.value.trim(), username: f.username.value.trim().toLowerCase(), password: f.password.value, phone: f.phone.value.trim(), city: f.city.value.trim() })
+          .then(function () { G.toast('انعمل حساب التاجر ✓'); vendors(); }, function (er) { btn.disabled = false; fail(/taken/.test(er.message) ? 'اسم المستخدم مستعمل' : /bad_username/.test(er.message) ? 'اسم المستخدم: أحرف إنكليزية صغيرة وأرقام (3 لـ 24)' : er); });
+      };
+      $('#view .list').onclick = function (e) {
+        var t = e.target.closest('[data-vt]'), pw = e.target.closest('[data-pw]'), vp = e.target.closest('[data-vp]');
+        if (t) S.rest('supply_vendors', 'id=eq.' + t.dataset.vt, { method: 'PATCH', body: { active: t.dataset.a === '1' } }).then(vendors, fail);
+        if (pw) { var np = prompt('كلمة السر الجديدة (6 أحرف أو أكثر)'); if (np) S.fn('supply-admin', { action: 'reset_password', vendor_id: +pw.dataset.pw, password: np }).then(function () { G.toast('تغيرت كلمة السر ✓'); }, fail); }
+        if (vp) { TAB = 'products'; PF = 'all'; PQ = vp.dataset.vp.toLowerCase(); shell(); }
+      };
+    }, fail);
+  }
+
   /* ---------------- codes ---------------- */
   function codes() {
     S.rest('supply_codes', 'select=*&order=created_at.desc').then(function (list) {
-      $('#view').innerHTML = '<form class="it" id="cf"><h3 style="margin-bottom:8px">كود جديد</h3><div class="row2"><div class="field"><label>الكود</label><input class="inp" name="code" required dir="ltr" style="text-transform:uppercase" placeholder="GM15"></div>' +
+      $('#view').innerHTML = '<form class="it" id="cf"><h3 style="margin-bottom:8px">كود جديد</h3><div class="row2"><div class="field"><label>الكود</label><input class="inp" name="code" required dir="ltr" style="text-transform:uppercase" placeholder="SAVE10"></div>' +
         '<div class="field"><label>نسبة الخصم %</label><input class="inp" name="pct" type="number" min="1" max="90" required value="15"></div></div>' +
         '<div class="field"><label>ملاحظة (لمين الكود)</label><input class="inp" name="note"></div><button class="btn block">إضافة</button></form>' +
         '<div class="list" style="margin-top:12px">' + list.map(function (c) {
