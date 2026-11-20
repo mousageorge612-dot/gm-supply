@@ -1,6 +1,6 @@
 # سبلاي | Forma Supply
 
-An Arabic-first, mobile-first, multi-vendor marketplace for sports equipment (and, after review, eligible supplements) in Syria.
+An Arabic-first, mobile-first, multi-vendor marketplace in Syria, focused mainly on sports supplements (each one admin-reviewed) plus training equipment. Products with price 0 show "السعر عند الطلب" and cannot be ordered online (the server rejects them); they offer a WhatsApp question to the seller instead.
 Static front end (plain HTML/CSS/JS, no build step) served by GitHub Pages, with Supabase (Postgres, Auth, Storage, Edge Functions) as the backend.
 
 ## Views

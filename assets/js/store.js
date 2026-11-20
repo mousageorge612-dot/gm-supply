@@ -75,8 +75,11 @@
   }
   function pMin(p) { var a = p.variants.map(function (v) { return v.price; }); return a.length ? Math.min.apply(null, a) : p.price; }
   function pMax(p) { var a = p.variants.map(function (v) { return v.price; }); return a.length ? Math.max.apply(null, a) : p.price; }
+  function onReq(p) { return !(pMax(p) > 0); }
+  function askWa(p) { var s = sellerById[p.seller_id] || {}; return s.whatsapp || D.support_whatsapp || null; }
   function pStock(p) { return p.variants.reduce(function (s, v) { return s + Math.max(0, v.stock); }, 0); }
 
+  function kindRank(p) { return (catBySlug[p.category] || {}).kind === 'supplement' ? 0 : 1; }
   function filtered() {
     var words = norm(S.q).split(/\s+/).filter(Boolean);
     var list = D.products.filter(function (p) {
@@ -87,13 +90,15 @@
       if (S.seller && String(p.seller_id) !== S.seller) return false;
       if (S.city && (s.city || s.governorate) !== S.city) return false;
       if (S.avail === 'in' && pStock(p) <= 0) return false;
+      if ((S.min !== '' || S.max !== '') && onReq(p)) return false;
       if (S.min !== '' && pMax(p) < Number(S.min)) return false;
       if (S.max !== '' && pMin(p) > Number(S.max)) return false;
       if (words.length) { var h = hay(p); for (var i = 0; i < words.length; i++) if (h.indexOf(words[i]) < 0) return false; }
       return true;
     });
-    if (S.sort === 'asc') list.sort(function (a, b) { return pMin(a) - pMin(b); });
+    if (S.sort === 'asc') list.sort(function (a, b) { return (onReq(a) - onReq(b)) || pMin(a) - pMin(b); });
     else if (S.sort === 'desc') list.sort(function (a, b) { return pMin(b) - pMin(a); });
+    else list.sort(function (a, b) { return (kindRank(a) - kindRank(b)) || (onReq(a) - onReq(b)); });
     return list;
   }
 
@@ -113,8 +118,9 @@
       '<div class="bd"><h3 dir="auto">' + esc(p.name_ar) + '</h3>' +
       (vs ? '<div class="meta" dir="auto">' + esc(vs) + '</div>' : '') +
       '<div class="meta">' + esc(s.name || '') + (s.city ? ' · ' + esc(s.city) : '') + '</div>' +
+      (onReq(p) ? '<div class="price ask">السعر عند الطلب</div><div class="avail">اسأل التاجر عن التوفر</div></div></button>' :
       '<div class="price">' + (mn !== mx ? '<span class="small muted" style="font-family:var(--ar);font-weight:600">من </span>' : '') + F.syp(mn) + '</div>' +
-      '<div class="avail ' + (st > 0 ? 'in">متوفر' : 'out">غير متوفر حالياً') + '</div></div></button>';
+      '<div class="avail ' + (st > 0 ? 'in">متوفر' : 'out">غير متوفر حالياً') + '</div></div></button>');
   }
   function renderChips() {
     var cats = [{ slug: 'all', name_ar: 'الكل' }].concat(D.categories.filter(function (c) {
@@ -167,7 +173,8 @@
     var s = sellerById[p.seller_id] || {}, c = catBySlug[p.category] || {};
     var avail = p.variants.filter(function (v) { return v.stock > 0; });
     var sel = avail[0] || p.variants[0], qty = 1, imgs = p.images || [];
-    function priceHtml() { return '<div style="font:700 22px var(--en);margin:6px 0">' + F.syp(sel ? sel.price : p.price) + '</div>'; }
+    var req = onReq(p), wa = req ? askWa(p) : null;
+    function priceHtml() { if (req) return '<div style="font-weight:700;font-size:18px;margin:6px 0">السعر عند الطلب</div>'; return '<div style="font:700 22px var(--en);margin:6px 0">' + F.syp(sel ? sel.price : p.price) + '</div>'; }
     F.sheet(
       '<div class="pd-img" id="pdImg">' + (imgs[0] ? '<img src="' + esc(F.media(imgs[0])) + '" alt="">' : F.ICON.img) + '</div>' +
       (imgs.length > 1 ? '<div class="thumbs">' + imgs.map(function (u, i) { return '<img src="' + esc(F.media(u)) + '" data-i="' + i + '" class="' + (i ? '' : 'on') + '" alt="">'; }).join('') + '</div>' : '') +
@@ -179,10 +186,12 @@
         '<div class="lbl">القياس / النوع</div><div class="variants" id="pdVars">' + p.variants.map(function (v) {
           return '<button type="button" class="variant' + (v === sel ? ' on' : '') + '" data-v="' + v.id + '"' + (v.stock > 0 ? '' : ' disabled title="غير متوفر"') + ' dir="auto">' + esc(v.label) + '</button>';
         }).join('') + '</div>' : '') +
-      '<div id="pdAvail" class="avail ' + (sel && sel.stock > 0 ? 'in">متوفر' : 'out">غير متوفر حالياً') + '</div>' +
+      (req ? '' : '<div id="pdAvail" class="avail ' + (sel && sel.stock > 0 ? 'in">متوفر' : 'out">غير متوفر حالياً') + '</div>') +
       (p.description ? '<p dir="auto" style="white-space:pre-line">' + esc(p.description) + '</p>' : '') +
+      (req ? (wa ? '<a class="btn wa block" style="margin:14px 0 4px" target="_blank" rel="noopener" href="' + F.waLink(wa, 'مرحبا، بدي اسأل عن سعر وتوفر: ' + p.name_ar + ' (' + s.name + ') على سبلاي') + '">اسأل عن السعر والتوفر على واتساب</a>'
+        : '<div class="note small" style="margin:14px 0 4px">التاجر لسّا ما حدّد سعر هالمنتج، فما فيك تطلبه أونلاين حالياً. رح ينضاف السعر قريباً.</div>') :
       '<div style="display:flex;gap:10px;align-items:center;margin:14px 0 4px"><div class="qty"><button type="button" id="qm" aria-label="أنقص">−</button><span id="qv">1</span><button type="button" id="qp" aria-label="زِد">+</button></div>' +
-      '<button class="btn" style="flex:1" id="addBtn" type="button"' + (sel && sel.stock > 0 ? '' : ' disabled') + '>أضف للسلة</button></div>' +
+      '<button class="btn" style="flex:1" id="addBtn" type="button"' + (sel && sel.stock > 0 ? '' : ' disabled') + '>أضف للسلة</button></div>') +
       '<p class="small muted">البيع والشحن من المتجر نفسه. الدفع عند الاستلام.</p>',
       function (b) {
         $$('.thumbs img', b).forEach(function (t) { t.onclick = function () { $$('.thumbs img', b).forEach(function (x) { x.classList.remove('on'); }); t.classList.add('on'); $('#pdImg', b).innerHTML = '<img src="' + esc(F.media(imgs[+t.dataset.i])) + '" alt="">'; }; });
@@ -194,6 +203,7 @@
             qty = 1; $('#qv', b).textContent = 1;
           };
         });
+        if (req) return;
         $('#qm', b).onclick = function () { qty = Math.max(1, qty - 1); $('#qv', b).textContent = qty; };
         $('#qp', b).onclick = function () { if (sel && qty < sel.stock) { qty++; $('#qv', b).textContent = qty; } else F.toast('هاد كل المتوفر'); };
         $('#addBtn', b).onclick = function () { if (sel) addToCart(p, sel, qty); };
